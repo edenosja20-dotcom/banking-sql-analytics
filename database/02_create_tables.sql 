@@ -1,0 +1,22 @@
+USE NovaBankDB;
+GO
+
+CREATE TABLE Customer
+(
+    customer_id INT IDENTITY(1,1) PRIMARY KEY,
+    first_name VARCHAR(50) NOT NULL,
+    last_name VARCHAR(50) NOT NULL,
+    date_of_birth DATE,
+    email VARCHAR(100) UNIQUE,
+    phone VARCHAR(30),
+    city VARCHAR(50),
+    created_at DATETIME2 DEFAULT GETDATE()
+);
+
+
+ CREATE TABLE Branch (
+
+    branch_id INT IDENTITY(1,1) PRIMARY KEY,
+    branch_name VARCHAR(100) NOT NULL,
+    city VARCHAR(50) NOT NULL
+ );
