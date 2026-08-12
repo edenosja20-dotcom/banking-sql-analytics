@@ -289,6 +289,7 @@ BEGIN
 END;
 
 
+
 SELECT 'Customers' AS table_name, COUNT(*) AS total
 FROM Customer
 UNION ALL
