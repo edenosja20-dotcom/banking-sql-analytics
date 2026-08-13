@@ -1,20 +1,16 @@
 USE NovaBankDB;
 GO
 
-
-
 -- =====================================================
--- Exercise 1
--- Business Question:
--- Display every account together with the customer
--- who owns it.
---
--- Show:
--- account_id
--- first_name
--- last_name
--- account_type
--- balance
+/* Display every account together with the customer
+   who owns it.
+
+   Show:
+   account_id
+   first_name
+   last_name
+   account_type
+   balance                           */
 -- =====================================================
 
     SELECT 
@@ -28,16 +24,14 @@ GO
         on a.customer_id = c.customer_id ;
 
 -- =====================================================
--- Exercise 2
--- Business Question:
--- Display every account together with the branch
--- where the account is registered.
---
--- Show:
--- account_id
--- account_type
--- branch_name
--- city
+/* Display every account together with the branch
+   where the account is registered.
+
+   Show:
+   account_id
+   account_type
+   branch_name
+   city.     */
 -- =====================================================
 
  SELECT 
@@ -49,19 +43,16 @@ GO
     JOIN Branch as b
     ON a.branch_id = b.branch_id;
 
-
 -- =====================================================
--- Exercise 3
--- Business Question:
--- Display customers together with their loans.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- loan_type
--- loan_amount
--- interest_rate
+/* Display customers together with their loans.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   loan_type
+   loan_amount
+   interest_rate.   */
 -- =====================================================
 
  SELECT
@@ -75,20 +66,18 @@ GO
     JOIN Loan as l
     ON c.customer_id = l.customer_id;
 
-
 -- =====================================================
--- Exercise 4
--- Business Question:
--- Display all cards together with the account
--- they belong to.
---
--- Show:
--- card_id
--- card_type
--- status
--- account_id
--- account_type
--- currency
+
+/* Display all cards together with the account
+   they belong to.
+
+   Show:
+   card_id
+   card_type
+   status
+   account_id
+   account_type
+   currency.  */
 -- =====================================================
 
  SELECT 
@@ -103,18 +92,16 @@ GO
     ON c.account_id = a.account_id;
 
 -- =====================================================
--- Exercise 5
--- Business Question:
--- Display all transactions together with the
--- account information.
---
--- Show:
--- transaction_id
--- account_id
--- account_type
--- transaction_type
--- amount
--- transaction_date
+/* Display all transactions together with the
+   account information.
+
+   Show:
+   transaction_id
+   account_id
+   account_type
+   transaction_type
+   amount
+   transaction_date.            */
 -- =====================================================
 
 SELECT  
@@ -128,25 +115,18 @@ SELECT
     JOIN Account as a
     ON t.account_id = a.account_id;
 
-
-
 -- =====================================================
--- Exercise 6
--- Business Question:
--- Display every transaction together with the
--- customer who owns the account.
---
--- Show:
--- transaction_id
--- first_name
--- last_name
--- account_id
--- transaction_type
--- amount
--- transaction_date
---
--- HINT:
--- Customer -> Account -> BankTransaction
+/* Display every transaction together with the
+   customer who owns the account.
+
+   Show:
+   transaction_id
+   first_name
+   last_name
+   account_id
+   transaction_type
+   amount
+   transaction_date. */
 -- =====================================================
 
  SELECT     
@@ -163,25 +143,19 @@ SELECT
     JOIN customer as c  
     ON a.customer_id = c.customer_id;
 
-
 -- =====================================================
--- Exercise 7
--- Business Question:
--- Display every customer account together with
--- the branch where it is registered.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- account_id
--- account_type
--- balance
--- branch_name
--- branch city
---
--- HINT:
--- Customer -> Account -> Branch
+/* Display every customer account together with
+   the branch where it is registered.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   account_id
+   account_type
+   balance
+   branch_name
+   branch city.   */
 -- =====================================================
 
     SELECT
@@ -199,23 +173,20 @@ SELECT
     JOIN Branch as b 
       ON a.branch_id = b.branch_id;
 
-
 -- =====================================================
--- Exercise 8
--- Business Question:
--- Find all transactions greater than 20,000
--- and display the customer who made them.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- transaction_id
--- transaction_type
--- amount
--- transaction_date
---
--- Order the largest transaction first.
+/* Find all transactions greater than 20,000
+   and display the customer who made them.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   transaction_id
+   transaction_type
+   amount
+   transaction_date
+
+   Order the largest transaction first.  */
 -- =====================================================
 
   SELECT
@@ -234,21 +205,18 @@ SELECT
     WHERE t.amount > 20000
     ORDER BY t.amount DESC;
 
-
 -- =====================================================
--- Exercise 9
--- Business Question:
--- Find all active loans and display the customer
--- who owns each loan.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- loan_id
--- loan_type
--- loan_amount
--- interest_rate
+/* Find all active loans and display the customer
+   who owns each loan.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   loan_id
+   loan_type
+   loan_amount
+   interest_rate          */
 -- =====================================================
 
   SELECT 
@@ -264,24 +232,18 @@ SELECT
       ON c.customer_id = l.customer_id
     WHERE l.status = 'Active';
 
-
 -- =====================================================
--- Exercise 10
--- Business Question:
--- Display all active cards together with the
--- customer who owns the account linked to the card.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- account_id
--- card_id
--- card_type
--- card status
---
--- HINT:
--- Customer -> Account -> Card
+/* Display all active cards together with the
+   customer who owns the account linked to the card.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   account_id
+    card_id
+   card_type
+   card status               */
 -- =====================================================
 
   SELECT
@@ -298,24 +260,17 @@ SELECT
     JOIN Card as ca
       ON a.account_id = ca.account_id;
 
-
 -- =====================================================
--- Exercise 11
--- Business Question:
--- Calculate the total transaction volume
--- for each customer.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- total_transaction_volume
---
--- Order from highest volume to lowest.
---
--- HINT:
--- JOIN + GROUP BY
--- Customer -> Account -> BankTransaction
+/* Calculate the total transaction volume
+   for each customer.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   total_transaction_volume
+
+   Order from highest volume to lowest.  */
 -- =====================================================
 
   SELECT
@@ -331,19 +286,16 @@ SELECT
     GROUP BY c.customer_id, c.first_name, c.last_name
     ORDER BY total_transaction_volume DESC;
 
-
 -- =====================================================
--- Exercise 12
--- Business Question:
--- Count how many accounts each customer owns.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- number_of_accounts
---
--- Order customers with the most accounts first.
+/* Count how many accounts each customer owns.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   number_of_accounts
+
+   Order customers with the most accounts first. */
 -- =====================================================
 
   SELECT
@@ -357,21 +309,18 @@ SELECT
     GROUP BY c.customer_id, c.first_name, c.last_name
     ORDER BY number_of_accounts DESC;
 
-
 -- =====================================================
--- Exercise 13
--- Business Question:
--- Calculate the total account balance for each customer.
---
--- A customer may own more than one account.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- total_balance
---
--- Order from highest total balance to lowest.
+/* Calculate the total account balance for each customer.
+
+   A customer may own more than one account.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   total_balance
+
+   Order from highest total balance to lowest. */
 -- =====================================================
 
   SELECT
@@ -385,23 +334,17 @@ SELECT
     GROUP BY c.customer_id, c.first_name, c.last_name
     ORDER BY total_balance DESC;
 
-
 -- =====================================================
--- Exercise 14
--- Business Question:
--- Calculate the total transaction volume handled
--- by each bank branch.
---
--- Show:
--- branch_id
--- branch_name
--- city
--- total_transaction_volume
---
--- Order from highest transaction volume to lowest.
---
--- HINT:
--- Branch -> Account -> BankTransaction
+/* Calculate the total transaction volume handled
+   by each bank branch.
+
+   Show:
+   branch_id
+   branch_name
+   city
+   total_transaction_volume
+ 
+   Order from highest transaction volume to lowest. */
 -- =====================================================
 
   SELECT
@@ -417,19 +360,16 @@ SELECT
     GROUP BY b.branch_id, b.branch_name, b.city
     ORDER BY total_transaction_volume DESC;
 
-
 -- =====================================================
--- Exercise 15
--- Business Question:
--- Count the number of transactions processed
--- through each branch.
---
--- Show:
--- branch_id
--- branch_name
--- number_of_transactions
---
--- Order the busiest branch first.
+/* Count the number of transactions processed
+   through each branch.
+
+   Show:
+   branch_id
+   branch_name
+   number_of_transactions
+
+   Order the busiest branch first. */
 -- =====================================================
 
 SELECT
@@ -444,20 +384,14 @@ SELECT
     GROUP BY b.branch_id, b.branch_name
     ORDER BY number_of_transactions DESC;
 
-
 -- =====================================================
--- Exercise 16
--- Business Question:
--- Find customers who own more than one account.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- number_of_accounts
---
--- HINT:
--- JOIN + GROUP BY + HAVING
+/* Find customers who own more than one account.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   number_of_accounts.         */
 -- =====================================================
 
  SELECT
@@ -472,23 +406,17 @@ SELECT
     HAVING COUNT(a.account_id) > 1
     ORDER BY number_of_accounts DESC;
 
-
 -- =====================================================
--- Exercise 17
--- Business Question:
--- Find customers whose total transaction volume
--- is greater than 500,000.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- total_transaction_volume
---
--- Order highest first.
---
--- HINT:
--- JOIN + GROUP BY + HAVING
+/* Find customers whose total transaction volume
+   is greater than 500,000.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   total_transaction_volume
+  
+   Order highest first.  */
 -- =====================================================
 
  SELECT
@@ -505,20 +433,16 @@ SELECT
     HAVING SUM(t.amount) > 500000
     ORDER BY total_transaction_volume DESC;
 
-
-
 -- =====================================================
--- Exercise 18
--- Business Question:
--- Find the average transaction amount for each customer.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- average_transaction_amount
---
--- Order highest average first.
+/* Find the average transaction amount for each customer.
+
+   Show:
+   customer_id
+   first_name
+   last_name
+   average_transaction_amount
+  
+   Order highest average first.  */
 -- =====================================================
 
  SELECT
@@ -534,28 +458,17 @@ SELECT
     GROUP BY c.customer_id, c.first_name, c.last_name
     ORDER BY average_transaction_amount DESC;
 
-
-
 -- =====================================================
--- Exercise 19
--- Business Question:
--- Display customers who have a loan together with
--- their total account balance.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- loan_type
--- loan_amount
--- total_account_balance
---
--- HINT:
--- Customer -> Loan
--- Customer -> Account
---
--- Be careful:
--- A customer may have multiple accounts.
+/* Display customers who have a loan together with
+   their total account balance.
+  
+   Show:
+   customer_id
+   first_name
+   last_name
+   loan_type
+   loan_amount
+   total_account_balance.       */
 -- =====================================================
 
 SELECT
@@ -579,33 +492,25 @@ GROUP BY
     l.loan_amount;
 
 -- =====================================================
--- Exercise 20
--- Business Question:
--- Create a detailed banking report showing
--- transactions together with the customer,
--- account, and branch information.
---
--- Show:
--- transaction_id
--- transaction_date
--- transaction_type
--- amount
--- customer_id
--- first_name
--- last_name
--- account_id
--- account_type
--- currency
--- branch_name
--- branch city
---
--- Order newest transactions first.
---
--- HINT:
--- BankTransaction
---      -> Account
---      -> Customer
---      -> Branch
+/* Create a detailed banking report showing
+   transactions together with the customer,
+   account, and branch information.
+ 
+   Show:
+   transaction_id
+   transaction_date
+   transaction_type
+   amount
+   customer_id
+   first_name
+   last_name
+   account_id
+   account_type
+   currency
+   branch_name
+   branch city
+  
+   Order newest transactions first.  */
 -- =====================================================
     
   SELECT
