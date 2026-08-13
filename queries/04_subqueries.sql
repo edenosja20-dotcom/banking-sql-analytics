@@ -1,24 +1,15 @@
 USE NovaBankDB ;
 GO 
 
-USE NovaBankDB;
-GO
-
 -- =====================================================
--- Exercise 1
--- Business Question:
--- Find all accounts whose balance is greater than
--- the average balance of all accounts.
---
--- Show:
--- account_id
--- account_type
--- balance
--- currency
---
--- HINT:
--- Compare balance with:
--- SELECT AVG(balance) FROM Account
+/*   Find all accounts whose balance is greater than
+   the average balance of all accounts.
+
+   Show:
+   account_id
+   account_type
+   balance
+   currency          */
 -- =====================================================
   
    SELECT 
@@ -31,19 +22,17 @@ GO
     ORDER BY balance DESC;
 
 -- =====================================================
--- Exercise 2
--- Business Question:
--- Find all transactions whose amount is greater than
--- the average transaction amount in the bank.
---
--- Show:
--- transaction_id
--- account_id
--- transaction_type
--- amount
--- transaction_date
---
--- Order from highest amount to lowest.
+/* Find all transactions whose amount is greater than
+   the average transaction amount in the bank.
+
+   Show:
+   transaction_id
+   account_id
+   transaction_type
+   amount
+   transaction_date
+
+   Order from highest amount to lowest. */
 -- =====================================================
  
   SELECT 
@@ -56,21 +45,15 @@ GO
     WHERE amount > (SELECT AVG(amount) FROM BankTransaction)
     ORDER BY amount DESC ;
 
-
 -- =====================================================
--- Exercise 3
--- Business Question:
--- Find the account or accounts that have the
--- highest balance in the bank.
---
--- Show:
--- account_id
--- account_type
--- balance
--- currency
---
--- HINT:
--- Compare balance with MAX(balance).
+/* Find the account or accounts that have the
+   highest balance in the bank.
+ 
+   Show:
+   account_id
+   account_type
+   balance
+   currency                              */
 -- =====================================================
   
      SELECT 
@@ -83,18 +66,13 @@ GO
       ORDER BY a.account_id ;
 
 -- =====================================================
--- Exercise 4
--- Business Question:
--- Find the loan or loans with the highest loan amount.
---
--- Show:
--- loan_id
--- customer_id
--- loan_type
--- loan_amount
---
--- HINT:
--- Use a subquery with MAX().
+/* Find the loan or loans with the highest loan amount.
+  
+   Show:
+   loan_id
+   customer_id
+   loan_type
+   loan_amount             */
 -- =====================================================
 
    SELECT
@@ -105,20 +83,13 @@ GO
    FROM Loan as l
    WHERE l.loan_amount = (SELECT max(loan_amount) FROM loan) ;
 
-
 -- =====================================================
--- Exercise 5
--- Business Question:
--- Find customers who have at least one account.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
--- Use IN with a subquery that returns customer_id
--- from Account.
+/* Find customers who have at least one account.
+
+   Show:
+   customer_id
+   first_name
+   last_name           */
 -- =====================================================
 
    SELECT
@@ -132,17 +103,12 @@ GO
 );
 
 -- =====================================================
--- Exercise 6
--- Business Question:
--- Find customers who have a loan.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
--- Use IN with a subquery on Loan.
+/* Find customers who have a loan.
+
+   Show:
+   customer_id
+   first_name
+   last_name                */
 -- =====================================================
 
      SELECT
@@ -157,17 +123,12 @@ GO
       ) ;
 
 -- =====================================================
--- Exercise 7
--- Business Question:
--- Find customers who do NOT have a loan.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
--- Use NOT IN.
+/* Find customers who do NOT have a loan.
+  
+   Show:
+   customer_id
+   first_name
+   last_name            */
 -- =====================================================
 
       SELECT 
@@ -182,19 +143,14 @@ GO
       ) ;
 
 -- =====================================================
--- Exercise 8
--- Business Question:
--- Find accounts that have at least one transaction
--- greater than 25,000.
---
--- Show:
--- account_id
--- account_type
--- balance
--- currency
---
--- HINT:
--- Use IN and return account_id from BankTransaction.
+/* Find accounts that have at least one transaction
+   greater than 25,000.
+  
+   Show:
+   account_id
+   account_type
+   balance
+   currency                            */
 -- =====================================================
 
     SELECT 
@@ -211,19 +167,13 @@ GO
      );
 
 -- =====================================================
--- Exercise 9
--- Business Question:
--- Find customers who own an account whose balance
--- is greater than 40,000.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
--- Customer.customer_id IN
--- a subquery against Account.
+/* Find customers who own an account whose balance
+   is greater than 40,000.
+  
+   Show:
+   customer_id
+   first_name
+   last_name                   */
 -- =====================================================
 
    SELECT 
@@ -239,21 +189,13 @@ GO
    ) ;
 
 -- =====================================================
--- Exercise 10
--- Business Question:
--- Find accounts whose total transaction volume is
--- greater than the average total transaction volume
--- across all accounts.
---
--- Show:
--- account_id
--- total_transaction_volume
---
--- HINT:
--- This requires a subquery that first calculates
--- SUM(amount) GROUP BY account_id.
---
--- This one is more difficult.
+/* Find accounts whose total transaction volume is
+   greater than the average total transaction volume
+   across all accounts.
+  
+   Show:
+    account_id
+   total_transaction_volume.          */
 -- =====================================================
 
 SELECT 
@@ -269,32 +211,16 @@ SELECT AVG(account_total)
   FROM BankTransaction as bt  
   GROUP by bt.account_id  ) as total ) ;
 
+-- =====================================================
+/* Find transactions made from accounts whose balance
+   is greater than the average account balance.
   
-
-
+   Show:
+   transaction_id
+   account_id
+   transaction_type
+  amount                                */
 -- =====================================================
--- Exercise 11
--- Business Question:
--- Find transactions made from accounts whose balance
--- is greater than the average account balance.
---
--- Show:
--- transaction_id
--- account_id
--- transaction_type
--- amount
---
--- HINT:
--- You can use a nested subquery:
---
--- BankTransaction.account_id IN
--- (
---     SELECT account_id
---     FROM Account
---     WHERE balance > (...)
--- )
--- =====================================================
-
 
  SELECT 
     bt.transaction_id, 
@@ -313,20 +239,15 @@ WHERE bt.account_id IN (
 );
 
 -- =====================================================
--- Exercise 12
--- Business Question:
--- Find customers whose account balance is greater
--- than the average account balance.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- Avoid duplicate customers.
---
--- HINT:
--- Use IN and a nested subquery.
+/* Find customers whose account balance is greater
+   than the average account balance.
+  
+   Show:
+   customer_id
+   first_name
+   last_name
+
+   Avoid duplicate customers.           */
 -- =====================================================
 
   SELECT 
@@ -345,27 +266,14 @@ WHERE bt.account_id IN (
     )
   ) ;
 
-
 -- =====================================================
--- Exercise 13
--- Business Question:
--- Find customers who have at least one active loan
--- using EXISTS.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
---
--- WHERE EXISTS
--- (
---     SELECT 1
---     FROM Loan ...
--- )
---
--- This should be a correlated subquery.
+/* Find customers who have at least one active loan
+   using EXISTS.
+  
+   Show:
+   customer_id
+   first_name
+   last_name.                   */
 -- =====================================================
 
          SELECT
@@ -382,16 +290,13 @@ WHERE EXISTS
 );
 
 -- =====================================================
--- Exercise 14
--- Business Question:
--- Find customers who do NOT have any loan.
---
--- Use NOT EXISTS instead of NOT IN.
---
--- Show:
--- customer_id
--- first_name
--- last_name
+/* Find customers who do NOT have any loan.
+    (NOT EXISTS instead of NOT IN)
+
+   Show:
+   customer_id
+   first_name
+   last_name                      */
 -- =====================================================
 
   SELECT
@@ -407,21 +312,14 @@ WHERE NOT EXISTS
 );
 
 -- =====================================================
--- Exercise 15
--- Business Question:
--- Find accounts that have at least one transaction
--- greater than 20,000 using EXISTS.
---
--- Show:
--- account_id
--- account_type
--- balance
---
--- HINT:
--- Correlate BankTransaction.account_id
--- with Account.account_id.
+/* Find accounts that have at least one transaction
+   greater than 20,000 using EXISTS.
+  
+   Show:
+   account_id
+   account_type
+   balance                                */
 -- =====================================================
-
 
       SELECT 
       a.account_id,
@@ -435,28 +333,16 @@ WHERE NOT EXISTS
          AND bt.amount > 20000 
       );
 
-
 -- =====================================================
--- Exercise 16
--- Business Question:
--- Find customers whose total account balance is greater
--- than the average total account balance per customer.
---
--- Show:
--- customer_id
--- first_name
--- last_name
--- total_balance
---
--- HINT:
--- Think in two stages:
---
--- 1. Calculate total balance per customer.
--- 2. Calculate the average of those totals.
---
--- This is intentionally challenging.
--- =====================================================
+/* Find customers whose total account balance is greater
+   than the average total account balance per customer.
   
+   Show:
+   customer_id
+   first_name
+   last_name
+   total_balance                */
+-- =====================================================
   
          SELECT 
         c.customer_id,
@@ -482,23 +368,14 @@ WHERE NOT EXISTS
          ) ;
 
 -- =====================================================
--- Exercise 17
--- Business Question:
--- Find transactions whose amount is greater than
--- the average transaction amount for THAT SAME account.
---
--- Show:
--- transaction_id
--- account_id
--- amount
--- transaction_date
---
--- HINT:
--- This requires a CORRELATED subquery.
---
--- The inner query must calculate AVG(amount)
--- for the account belonging to the current
--- transaction in the outer query.
+/* Find transactions whose amount is greater than
+   the average transaction amount for THAT SAME account.
+
+   Show:
+   transaction_id
+   account_id
+   amount
+   transaction_date           */
 -- =====================================================
 
   SELECT
@@ -514,27 +391,16 @@ WHERE t.amount >
     WHERE bt.account_id = t.account_id
 );
 
-
 -- =====================================================
--- Exercise 18
--- Business Question:
--- Find accounts whose balance is greater than
--- the average balance of accounts using the
--- same currency.
---
--- Show:
--- account_id
--- account_type
--- currency
--- balance
---
--- HINT:
--- This is another correlated subquery.
---
--- Compare:
--- outer account.currency
--- with
--- inner account.currency
+/* Find accounts whose balance is greater than
+   the average balance of accounts using the
+   same currency.
+  
+   Show:
+   account_id
+   account_type
+   currency
+   balance                    */
 -- =====================================================
 
       SELECT 
@@ -550,20 +416,15 @@ WHERE t.amount >
       WHERE a.currency = ac.currency ) ;
 
 -- =====================================================
--- Exercise 19
--- Business Question:
--- Find customers who have BOTH:
---
--- 1. At least one loan
--- 2. At least one account with balance greater than 30,000
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- HINT:
--- You can combine two EXISTS conditions.
+/* Find customers who have BOTH:
+ 
+   1. At least one loan
+   2. At least one account with balance greater than 30,000
+ 
+   Show:
+   customer_id
+   first_name
+   last_name                         */
 -- =====================================================
     
      SELECT
@@ -586,31 +447,16 @@ AND EXISTS
 );
 
 -- =====================================================
--- Exercise 20
--- Business Question:
--- Find customers who have at least one transaction
--- greater than the average transaction amount
--- across the entire bank.
---
--- Show:
--- customer_id
--- first_name
--- last_name
---
--- Avoid duplicate customers.
---
--- HINT:
--- Customer
---    ↓
--- Account
---    ↓
--- BankTransaction
---
--- The transaction amount must be compared with:
--- SELECT AVG(amount) FROM BankTransaction
---
--- Try solving this mainly with subqueries rather
--- than JOINs in the outer query.
+/* Find customers who have at least one transaction
+   greater than the average transaction amount
+   across the entire bank.
+  
+   Show:
+   customer_id
+   first_name
+   last_name
+
+   Avoid duplicate customers.        */
 -- =====================================================
 
      SELECT 
