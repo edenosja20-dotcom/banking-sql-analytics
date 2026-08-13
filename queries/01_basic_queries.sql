@@ -5,8 +5,6 @@ USE NovaBankDB;
 GO
 
 -- =====================================================
--- Exercise 1
--- Business Question:
 -- Display all customers registered in NovaBank.
 -- =====================================================
 
@@ -14,10 +12,8 @@ GO
      FROM Customer;
 
 -- =====================================================
--- Exercise 2
--- Business Question:
--- Display only the customer ID, first name,
--- last name, and city for every customer.
+ /* Display only the customer ID, first name,
+    last name, and city for every customer. */   
 -- =====================================================
 
      SELECT 
@@ -28,9 +24,7 @@ GO
      FROM Customer as c ;
 
 -- =====================================================
--- Exercise 3
--- Business Question:
--- Find all customers who live in Tirana.
+   /* Find all customers who live in Tirana. */
 -- =====================================================
 
   SELECT
@@ -42,9 +36,7 @@ GO
   WHERE c.city = 'Tirana';
 
 -- =====================================================
--- Exercise 4
--- Business Question:
--- Display all accounts that are currently active.
+   /* Display all accounts that are currently active. */
 -- =====================================================
 
       SELECT
@@ -52,11 +44,9 @@ GO
        FROM account as a 
        where a.status = 'Active' ;
 
--- =====================================================
--- Exercise 5
--- Business Question:
--- Find all accounts with a balance greater than 20,000.
--- =====================================================
+-- =======================================================
+/* Find all accounts with a balance greater than 20,000.*/
+-- =======================================================
     
      SELECT 
       a.account_id,
@@ -64,12 +54,10 @@ GO
       FROM account as a
       WHERE a.balance > 20000 ;
 
--- =====================================================
--- Exercise 6
--- Business Question:
--- Display the 10 accounts with the highest balances.
--- Show the account ID, account type, balance, and currency.
--- =====================================================
+-- ============================================================
+/* Display the 10 accounts with the highest balances.
+   Show the account ID, account type, balance, and currency. */
+-- ============================================================
 
         SELECT TOP 10
         a.account_id,
@@ -80,9 +68,7 @@ GO
         ORDER BY a.balance DESC ;
 
 -- =====================================================
--- Exercise 7
--- Business Question:
--- Find all accounts whose currency is EUR.
+ /* Find all accounts whose currency is EUR. */
 -- =====================================================
 
      SELECT 
@@ -94,9 +80,7 @@ GO
      WHERE a.currency = 'EUR' ;
 
 -- =====================================================
--- Exercise 8
--- Business Question:
--- Display all accounts that are inactive.
+ /* Display all accounts that are inactive. */
 -- =====================================================
 
      SELECT
@@ -108,10 +92,8 @@ GO
      WHERE a.status = 'Inactive' ;
 
 -- =====================================================
--- Exercise 9
--- Business Question:
--- Find all bank transactions with an amount
--- greater than 20,000.
+ /* Find all bank transactions with an amount
+    greater than 20,000. */
 -- =====================================================
 
     SELECT
@@ -124,12 +106,10 @@ GO
     WHERE t.amount > 20000 ;
 
 -- =====================================================
--- Exercise 10
--- Business Question:
--- Display the 20 largest transactions,
--- ordered from largest amount to smallest amount.
--- Show transaction ID, account ID, transaction type,
--- amount, and transaction date.
+ /* Display the 20 largest transactions,
+    ordered from largest amount to smallest amount.
+    Show transaction ID, account ID, transaction type,
+    amount, and transaction date.  */
 -- =====================================================
   
      SELECT TOP 20
