@@ -207,10 +207,26 @@ GO
    Filter the CTE in the outer query. */
 -- =====================================================
 
-
-
-
-
+       WITH tot_trans_volume as (
+           SELECT 
+            c.customer_id, 
+            c.first_name, 
+            c.last_name, 
+            SUM(t.amount) as total_trans_volume 
+          FROM customer as c 
+          JOIN account as a   
+            on c.customer_id = a.customer_id 
+          JOIN BankTransaction as t 
+            on t.account_id = a.account_id 
+           GROUP BY c.customer_id, c.first_name, c.last_name  
+       )
+            SELECT 
+              customer_id, 
+              first_name, 
+              last_name, 
+              total_trans_volume
+            FROM tot_trans_volume 
+            WHERE total_trans_volume > 500000;
 
 -- =====================================================
 /* Calculate the total transaction volume handled
@@ -232,11 +248,28 @@ GO
    Order from highest volume to lowest. */
 -- =====================================================
 
+  WITH total_volume_perBranch as (
 
-
-
-
-
+      SELECT 
+       b.branch_id, 
+       b.branch_name, 
+       b.city, 
+       COUNT(t.amount) as total_trans_volume
+       FROM Branch as b 
+       JOIN account as a    
+         on b.branch_id = a.branch_id 
+       JOIN banktransaction as t 
+         on t.account_id = t.account_id 
+        GROUP BY b.branch_id, b.branch_name, b.city 
+  )     
+    SELECT 
+     branch_id, 
+     branch_name, 
+     city, 
+     total_trans_volume 
+     FROM total_volume_perBranch 
+     ORDER BY total_trans_volume DESC;    
+               
 -- =====================================================
 /* Find accounts whose total transaction volume is
    greater than the average total transaction volume
@@ -246,18 +279,27 @@ GO
    account_id
    total_transaction_volume
 
-   First create a CTE containing:
-   account_id
-   total_transaction_volume
 
    Then compare each total with the average
    of total_transaction_volume from that CTE. */
 -- =====================================================
+   
+     WITH total_trans_volume as (
 
-
-
-
-
+          SELECT 
+          t.account_id, 
+          SUM(t.amount) as total_trans_volume1 
+          FROM BankTransaction as t 
+          GROUP BY t.account_id
+     ) 
+       SELECT 
+         account_id,
+         total_trans_volume1 
+         FROM total_trans_volume
+         WHERE total_trans_volume1 > (
+            SELECT AVG(total_trans_volume1)
+            FROM total_trans_volume
+         ) ;
 
 -- =====================================================
 /* Find customers whose total account balance is
