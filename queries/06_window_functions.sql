@@ -299,11 +299,28 @@ GO
    amount > previous_amount */
 -- =====================================================
 
-
-
-
-
-
+    WITH transaction_comparison as (  
+       SELECT 
+        t.transaction_id, 
+        t.account_id, 
+        t.transaction_date, 
+        t.amount,
+        LAG(t.amount) OVER (
+          PARTITION BY t.account_id 
+          ORDER BY t.transaction_date 
+        )  as previous_amount
+      FROM BankTransaction as t       
+    )
+       SELECT 
+       transaction_id, 
+       account_id, 
+       transaction_date, 
+       amount, 
+       previous_amount 
+       FROM transaction_comparison
+       WHERE amount > previous_amount
+    ORDER BY account_id, transaction_date ;
+   
 -- =====================================================
 /* Calculate a running transaction total for each account.
 
@@ -325,11 +342,17 @@ GO
        ORDER BY transaction_date
    ) */
 -- =====================================================
-
-
-
-
-
+   
+       SELECT 
+        t.transaction_id, 
+        t.account_id, 
+        t.transaction_date, 
+        t.amount, 
+        SUM(t.amount) OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.transaction_date 
+        ) as running_total 
+        FROM BankTransaction as t ;
 
 -- =====================================================
 /* Calculate a running transaction count for each account.
@@ -349,10 +372,17 @@ GO
    Use COUNT() OVER(). */
 -- =====================================================
 
-
-
-
-
+          SELECT 
+            t.transaction_id, 
+            t.account_id, 
+            t.transaction_date, 
+            COUNT(t.transaction_id) OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.transaction_date 
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+           ) as transaction_count_so_far
+         FROM banktransaction as t 
+         ORDER BY t.account_id, t.transaction_date ;
 
 -- =====================================================
 /* Display every transaction together with:
@@ -370,10 +400,17 @@ GO
    Use AVG() OVER(PARTITION BY account_id). */
 -- =====================================================
 
-
-
-
-
+    SELECT 
+      t.transaction_id,
+      t.account_id,
+      t.amount,
+      AVG(t.amount) OVER (
+        PARTITION BY t.account_id 
+      ) as average_account_transaction ,
+      t.amount -  AVG(t.amount) OVER (
+        PARTITION BY t.account_id 
+      ) AS difference_from_account_average
+     FROM BankTransaction as t ;
 
 -- =====================================================
 /* Find transactions whose amount is greater than
@@ -390,10 +427,24 @@ GO
    Then filter the result in the outer query. */
 -- =====================================================
 
+  WITH average_trans_amount as (
+    SELECT 
+     t.transaction_id, 
+     t.account_id, 
+     t.amount, 
+     AVG(t.amount) OVER (
+         PARTITION BY t.account_id
+     ) as average_account_trans
+     FROM BankTransaction as t 
+  )
 
-
-
-
+    SELECT 
+     transaction_id, 
+     account_id, 
+     amount, 
+     average_account_trans
+     FROM average_trans_amount 
+     WHERE amount > average_account_trans ;
 
 -- =====================================================
 /* Find the largest transaction for each account.
@@ -410,11 +461,27 @@ GO
 
    Return only row_number = 1. */
 -- =====================================================
-
-
-
-
-
+     
+ WITH ranked_transaction as (
+     SELECT 
+      t.account_id, 
+      t.transaction_id, 
+      t.amount, 
+      t.transaction_date, 
+      ROW_NUMBER() OVER (
+        PARTITION BY t.account_id 
+        ORDER BY t.amount DESC 
+      ) as row_num
+      FROM BankTransaction as t 
+ )
+      SELECT 
+        account_id, 
+        transaction_id,
+        amount, 
+        transaction_date 
+      FROM ranked_transaction
+      WHERE row_num = 1 
+      ORDER BY account_id ;
 
 -- =====================================================
 /* Find the three largest transactions for each account.
@@ -430,10 +497,24 @@ GO
    Return only ranks <= 3. */
 -- =====================================================
 
-
-
-
-
+      WITH top3_transaction as (
+        SELECT 
+          t.account_id, 
+          t.transaction_id, 
+          t.amount, 
+          ROW_NUMBER() OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.amount DESC 
+         ) as transaction_rank 
+         FROM BankTransaction as t 
+      )
+        SELECT
+          account_id, 
+          transaction_id, 
+          amount, 
+          transaction_rank 
+        FROM top3_transaction 
+        WHERE transaction_rank <=3 ;
 
 -- =====================================================
 /* Find the highest-balance account for each currency.
@@ -450,10 +531,23 @@ GO
    Return only the top-ranked account or accounts. */
 -- =====================================================
 
-
-
-
-
+   WITH highest_balance_currency as (
+      SELECT 
+        a.account_id, 
+        a.currency, 
+        a.balance, 
+        ROW_NUMBER() OVER (
+        PARTITION BY a.currency 
+        ORDER BY a.balance DESC 
+       )as row_num 
+      FROM account AS a  
+ )
+    SELECT 
+      account_id, 
+      currency, 
+      balance 
+    FROM highest_balance_currency 
+    WHERE row_num = 1 ; 
 
 -- =====================================================
 /* Display every customer's account together with their
@@ -479,11 +573,23 @@ GO
    You will need Customer and Account. */
 -- =====================================================
 
-
-
-
-
-
+      SELECT
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    a.account_id,
+    a.balance,
+    SUM(a.balance) OVER
+    (
+        PARTITION BY c.customer_id
+    ) AS customer_total_balance
+FROM Customer AS c
+JOIN Account AS a
+    ON c.customer_id = a.customer_id
+ORDER BY
+    c.customer_id,
+    a.account_id;
+       
 -- =====================================================
 /* Rank customers according to total account balance.
 
@@ -499,10 +605,28 @@ GO
    Then use DENSE_RANK() over total_balance DESC. */
 -- =====================================================
 
+  WITH total_balance_percustomer as (
+      SELECT 
+        c.customer_id, 
+        c.first_name, 
+        c.last_name,
+        SUM(a.balance) as total_balance 
+        FROM customer as c 
+        JOIN account as a 
+           on a.customer_id = c.customer_id
+        GROUP BY c.customer_id, c.first_name, c.last_name    
+   )  
 
-
-
-
+   SELECT 
+     customer_id, 
+     first_name, 
+     last_name, 
+     total_balance,
+     DENSE_RANK() OVER (
+        ORDER BY total_balance DESC 
+     ) as customer_rank 
+     FROM total_balance_percustomer  
+     ORDER BY customer_rank ;
 
 -- =====================================================
 /* Rank customers according to total transaction volume.
@@ -520,10 +644,29 @@ GO
    Then use DENSE_RANK(). */
 -- =====================================================
 
-
-
-
-
+  WITH total_trans_volume as (
+      SELECT 
+       c.customer_id, 
+       c.first_name, 
+       c.last_name, 
+       SUM(t.amount) as transaction_volume_percustomer
+       FROM BankTransaction as t 
+       JOIN account as a 
+         on t.account_id = a.account_id 
+       JOIN customer as c 
+         on c.customer_id = a.customer_id 
+         GROUP BY c.customer_id, c.first_name, c.last_name  
+  )
+         SELECT 
+           customer_id, 
+           first_name, 
+           last_name, 
+           transaction_volume_percustomer, 
+           DENSE_RANK() OVER (
+             ORDER BY transaction_volume_percustomer DESC
+           ) as customer_rank
+        FROM total_trans_volume 
+        ORDER BY customer_rank ;
 
 -- =====================================================
 /* Find the top 5 customers by total transaction volume.
@@ -544,11 +687,41 @@ GO
    Return only ranks <= 5. */
 -- =====================================================
 
-
-
-
-
-
+WITH top5_transaction as (
+    SELECT 
+     c.customer_id, 
+     c.first_name, 
+     c.last_name, 
+     SUM(t.amount) as total_transaction_volume
+     FROM customer as c 
+     JOIN account as a   
+       on c.customer_id = a.customer_id 
+     JOIN BankTransaction as t 
+       on t.account_id = a.account_id
+    GROUP BY c.customer_id, c.first_name, c.last_name   
+),
+ranked_customers AS (
+    SELECT
+        customer_id,
+        first_name,
+        last_name,
+        total_transaction_volume,
+        DENSE_RANK() OVER (
+            ORDER BY total_transaction_volume DESC
+        ) AS customer_rank
+    FROM top5_transaction
+)
+       
+       SELECT 
+        customer_id, 
+        first_name,
+        last_name, 
+        total_transaction_volume, 
+        customer_rank 
+    FROM ranked_customers 
+    WHERE customer_rank <= 5 
+    ORDER BY customer_rank ;
+ 
 -- =====================================================
 /* Display each transaction together with:
 
@@ -570,3 +743,38 @@ GO
 
    Partition everything by account_id. */
 -- =====================================================
+
+SELECT
+    t.transaction_id,
+    t.account_id,
+    t.transaction_date,
+    t.amount,
+
+    LAG(t.amount) OVER
+    (
+        PARTITION BY t.account_id
+        ORDER BY t.transaction_date, t.transaction_id
+    ) AS previous_amount,
+
+    LEAD(t.amount) OVER
+    (
+        PARTITION BY t.account_id
+        ORDER BY t.transaction_date, t.transaction_id
+    ) AS next_amount,
+
+    AVG(t.amount) OVER
+    (
+        PARTITION BY t.account_id
+    ) AS average_account_amount,
+
+    SUM(t.amount) OVER
+    (
+        PARTITION BY t.account_id
+        ORDER BY t.transaction_date, t.transaction_id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS running_total
+FROM BankTransaction AS t
+ORDER BY
+    t.account_id,
+    t.transaction_date,
+    t.transaction_id;
