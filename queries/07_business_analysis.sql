@@ -42,11 +42,18 @@ GO
    Order from highest balance to lowest. */
 -- =====================================================
 
-
-
-
-
-
+   SELECT TOP 10 
+    c.customer_id, 
+    c.first_name, 
+    c.last_name, 
+    SUM(t.amount) as total_account_balance
+    FROM customer as c  
+    JOIN account as a   
+      on c.customer_id = a.customer_id 
+    JOIN BankTransaction as t 
+      on t.account_id = a.account_id 
+    GROUP BY c.customer_id, c.first_name, c.last_name
+    ORDER BY total_account_balance DESC ;   
 
 -- =====================================================
 /* Create a branch performance report.
@@ -64,12 +71,22 @@ GO
    from highest to lowest. */
 -- =====================================================
 
-
-
-
-
-
-
+    SELECT
+      b.branch_id,
+      b.branch_name,
+      b.city,
+      COUNT(DISTINCT a.account_id) AS number_of_accounts,
+      COUNT(t.transaction_id) AS number_of_transactions,
+      SUM(t.amount) AS total_transaction_volume,
+      AVG(t.amount) AS average_transaction_amount
+    FROM Branch AS b
+    JOIN Account AS a
+      ON b.branch_id = a.branch_id
+    JOIN BankTransaction AS t
+      ON a.account_id = t.account_id
+    GROUP BY b.branch_id, b.branch_name, b.city
+    ORDER BY total_transaction_volume DESC;
+   
 -- =====================================================
 /* Analyze transaction activity by transaction type.
 
@@ -84,11 +101,15 @@ GO
    to lowest. */
 -- =====================================================
 
-
-
-
-
-
+     SELECT 
+       t.transaction_type, 
+       COUNT(t.transaction_type) as number_of_transactions, 
+       SUM(t.amount) as total_transaction_volume, 
+       AVG(t.amount) as average_transaction_amount, 
+       MAX(t.amount) as largest_transaction 
+       FROM BankTransaction as t 
+       GROUP BY t.transaction_type 
+       ORDER BY total_transaction_volume DESC ;
 
 -- =====================================================
 /* Create a monthly transaction performance report.
@@ -104,12 +125,16 @@ GO
    to newest month. */
 -- =====================================================
 
-
-
-
-
-
-
+         SELECT
+          YEAR(t.transaction_date) AS transaction_year,
+          MONTH(t.transaction_date) AS transaction_month,
+          COUNT(*) AS number_of_transactions,
+          SUM(t.amount) AS total_transaction_volume,
+          AVG(t.amount) AS average_transaction_amount
+        FROM BankTransaction AS t
+        GROUP BY YEAR(t.transaction_date), MONTH(t.transaction_date)
+        ORDER BY transaction_year ASC, transaction_month ASC;
+        
 -- =====================================================
 /* Calculate the month-over-month change in total
    transaction volume.
