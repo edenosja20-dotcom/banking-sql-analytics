@@ -254,12 +254,12 @@ GO
        b.branch_id, 
        b.branch_name, 
        b.city, 
-       COUNT(t.amount) as total_trans_volume
+       SUM(t.amount) as total_trans_volume
        FROM Branch as b 
        JOIN account as a    
          on b.branch_id = a.branch_id 
        JOIN banktransaction as t 
-         on t.account_id = t.account_id 
+         on t.account_id = a.account_id 
         GROUP BY b.branch_id, b.branch_name, b.city 
   )     
     SELECT 
@@ -268,8 +268,8 @@ GO
      city, 
      total_trans_volume 
      FROM total_volume_perBranch 
-     ORDER BY total_trans_volume DESC;    
-               
+     ORDER BY total_trans_volume DESC;   
+
 -- =====================================================
 /* Find accounts whose total transaction volume is
    greater than the average total transaction volume
@@ -317,11 +317,24 @@ GO
    with AVG(total_balance) from the CTE. */
 -- =====================================================
 
-
-
-
-
-
+  WITH tot_account_balance as (
+         SELECT 
+         c.customer_id, 
+         SUM(a.balance) as total_balance
+         FROM account as a 
+         JOIN customer as c
+             on c.customer_id = a.customer_id 
+        group by c.customer_id    
+  )     
+        SELECT 
+        customer_id, 
+        total_balance 
+        FROM tot_account_balance 
+        WHERE total_balance > (
+             SELECT AVG(total_balance)
+             FROM tot_account_balance 
+        ) ;
+ 
 -- =====================================================
 /* Find the customers with the highest total
    transaction volume.
@@ -339,11 +352,31 @@ GO
    equals the maximum total_transaction_volume. */
 -- =====================================================
 
+  WITH total_trans_percustomer as (
+     SELECT 
+      c.customer_id, 
+      c.first_name, 
+      c.last_name,
+      SUM(bt.amount) as total_trans_volume 
+      FROM BankTransaction as bt 
+      JOIN account as a 
+         on bt.account_id = a.account_id 
+      JOIN customer as c 
+         on c.customer_id = a.customer_id   
+      group by c.customer_id, c.first_name, c.last_name  
+  )
 
-
-
-
-
+     SELECT 
+      customer_id, 
+      first_name, 
+      last_name, 
+      total_trans_volume 
+     FROM total_trans_percustomer 
+     WHERE total_trans_volume = (
+        SELECT MAX(total_trans_volume)
+        FROM total_trans_percustomer 
+     ) ;
+    
 -- =====================================================
 /* Calculate the average transaction amount
    for each customer.
@@ -362,10 +395,26 @@ GO
    Order from highest average to lowest. */
 -- =====================================================
 
-
-
-
-
+    WITH average_amount_percustomer as (
+        SELECT 
+        c.customer_id, 
+        c.first_name,
+        c.last_name, 
+        AVG(bt.amount) as avg_trans_amount
+        FROM customer as c 
+        JOIN account as a   
+          on a.customer_id = c.customer_id 
+        JOIN BankTransaction as bt   
+          on bt.account_id = a.account_id 
+         GROUP by c.customer_id, c.first_name, c.last_name    
+    )
+       SELECT 
+        customer_id, 
+        first_name, 
+        last_name, 
+        avg_trans_amount
+       FROM average_amount_percustomer
+       ORDER BY avg_trans_amount DESC ; 
 
 -- =====================================================
 /* Find customers who own more than one account.
@@ -383,10 +432,25 @@ GO
    customers with more than one account are returned. */
 -- =====================================================
 
+    WITH nr_of_accounts as (
 
-
-
-
+         SELECT 
+         c.customer_id, 
+         c.first_name,
+         c.last_name, 
+         COUNT(*) as number_of_accounts 
+         FROM account as a
+         JOIN customer as c 
+           on a.customer_id = c.customer_id 
+         GROUP BY c.customer_id, c.first_name, c.last_name     
+    )
+        SELECT 
+        customer_id, 
+        first_name, 
+        last_name, 
+        number_of_accounts 
+        FROM nr_of_accounts 
+        WHERE number_of_accounts > 1 ;
 
 -- =====================================================
 /* Find the total number of transactions and
@@ -404,10 +468,29 @@ GO
    Order from highest transaction volume to lowest. */
 -- =====================================================
 
+    WITH total_for_customer as (
+      SELECT 
+      c.customer_id, 
+      c.first_name,
+      c.last_name, 
+      COUNT(*) as transaction_count, 
+      SUM(bt.amount) as total_trans_volume
+      FROM BankTransaction as bt 
+      JOIN account as a  
+        on a.account_id = bt.account_id
+      JOIN customer as c  
+        on c.customer_id = a.customer_id
+      GROUP by c.customer_id,c.first_name,c.last_name 
+    ) 
 
-
-
-
+     SELECT 
+      customer_id,
+      first_name,
+      last_name, 
+      transaction_count, 
+      total_trans_volume
+     FROM total_for_customer
+     ORDER BY total_trans_volume DESC ; 
 
 -- =====================================================
 /* Find customers who have both:
@@ -429,12 +512,45 @@ GO
 
    Then join the two CTEs together in the final query. */
 -- =====================================================
+  
+    WITH CustomerBalances as (
+       SELECT 
+       c.customer_id,
+       c.first_name, 
+       c.last_name, 
+       SUM(a.balance) as total_balance
+       FROM customer as c   
+       JOIN account as a 
+         on c.customer_id = a.customer_id
+       GROUP by c.customer_id, c.first_name, c.last_name
+       HAVING SUM(a.balance) > 30000
+    ), 
+      
+    CustomerTransactionTotals as (
+          SELECT 
+           c.customer_id, 
+           c.first_name, 
+           c.last_name, 
+           SUM(t.amount) as total_trans_volume 
+          FROM customer as c 
+          JOIN account as a 
+             on c.customer_id = a.customer_id 
+          JOIN BankTransaction as t 
+             on t.account_id = a.account_id 
+          GROUP BY c.customer_id,c.first_name, c.last_name 
+          HAVING SUM(t.amount) > 500000
+     )
 
-
-
-
-
-
+      SELECT 
+      cb.customer_id, 
+      cb.first_name,
+      cb.last_name,
+      cb.total_balance,
+      ct.total_trans_volume 
+      FROM CustomerBalances as cb 
+      JOIN CustomerTransactionTotals as ct 
+        on cb.customer_id = ct.customer_id  ;
+         
 -- =====================================================
 /* Compare each customer's total transaction volume
    with the average customer transaction volume.
@@ -451,10 +567,29 @@ GO
    Use a CTE to calculate customer totals first. */
 -- =====================================================
 
-
-
-
-
+       WITH customer_totals as (
+         SELECT
+         c.customer_id, 
+         c.first_name,
+         c.last_name, 
+         SUM(bt.amount) as total_trans_volume 
+         FROM BankTransaction as bt 
+         JOIN account as a 
+           on bt.account_id = a.account_id 
+         JOIN customer as c  
+           on c.customer_id = a.customer_id 
+         GROUP BY c.customer_id,c.first_name,c.last_name    
+       )
+          SELECT 
+          customer_id, 
+          first_name, 
+          last_name, 
+          total_trans_volume 
+          FROM customer_totals 
+          WHERE total_trans_volume > (
+             SELECT AVG(total_trans_volume)
+             FROM customer_totals 
+          ) ;
 
 -- =====================================================
 /* Find branches whose total transaction volume
@@ -473,12 +608,33 @@ GO
    Then compare each branch total with the
    average of the CTE results. */
 -- =====================================================
-
-
-
-
-
-
+      
+       WITH total_trans_perbranch as (
+         SELECT 
+         b.branch_id, 
+         b.branch_name,
+         b.city, 
+         SUM(t.amount) as total_trans_volume
+         FROM branch as b
+         JOIN account as a  
+            on b.branch_id = a.branch_id 
+         JOIN BankTransaction as t 
+            on t.account_id = a.account_id 
+          GROUP BY b.branch_id, b.branch_name,b.city      
+       )
+        
+         SELECT 
+         branch_id, 
+         branch_name, 
+         city,
+         total_trans_volume 
+         FROM total_trans_perbranch 
+         WHERE total_trans_volume > (
+            SELECT AVG(total_trans_volume)
+            FROM total_trans_perbranch
+         ) ;
+         
+        
 -- =====================================================
 /* Create two CTEs.
 
@@ -500,3 +656,39 @@ GO
 
    Order from highest total loan amount to lowest. */
 -- =====================================================
+
+    WITH total_account_balance as (
+        SELECT 
+         c.customer_id, 
+         c.first_name, 
+         c.last_name, 
+         SUM(a.balance) as account_balance
+        FROM customer as c 
+        JOIN account as a 
+          on c.customer_id = a.customer_id 
+        GROUP BY c.customer_id, c.first_name, c.last_name  
+    ),
+      
+      total_loan_percustomer as (
+
+         SELECT 
+          c.customer_id, 
+          c.first_name, 
+          c.last_name,
+          SUM(l.loan_amount) as tot_loan_amount 
+         FROM customer as c  
+         JOIN loan as l  
+           on c.customer_id = l.customer_id 
+         GROUP BY c.customer_id, c.first_name, c.last_name  
+      )
+
+      SELECT 
+        tb.customer_id, 
+        tb.first_name, 
+        tb.last_name, 
+        tb.account_balance, 
+        tl.tot_loan_amount
+      FROM total_account_balance as tb 
+      JOIN total_loan_percustomer as tl
+        on tb.customer_id = tl.customer_id 
+      ORDER BY tl.tot_loan_amount DESC ; 
