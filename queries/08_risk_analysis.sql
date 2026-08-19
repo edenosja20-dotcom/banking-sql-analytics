@@ -280,11 +280,15 @@ total_transaction AS
    to lowest. */
 -- =====================================================
 
-
-
-
-
-
+       SELECT
+         t.account_id,
+         CAST(t.transaction_date AS DATE) AS transaction_date,
+         COUNT(*) AS number_of_transactions,
+         SUM(t.amount) AS daily_transaction_volume
+        FROM BankTransaction AS t
+        GROUP BY t.account_id, CAST(t.transaction_date AS DATE)
+        HAVING SUM(t.amount) > 50000
+        ORDER BY daily_transaction_volume DESC;
 
 -- =====================================================
 /* Find accounts that made more than five transactions
