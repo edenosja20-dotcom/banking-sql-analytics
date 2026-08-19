@@ -304,12 +304,16 @@ total_transaction AS
    to lowest. */
 -- =====================================================
 
-
-
-
-
-
-
+     SELECT
+        t.account_id,
+        CAST(t.transaction_date AS DATE) AS transaction_date,
+        COUNT(*) AS number_of_transactions,
+        SUM(t.amount) AS total_daily_volume
+     FROM BankTransaction AS t
+     GROUP BY t.account_id, CAST(t.transaction_date AS DATE)
+     HAVING COUNT(*) > 5
+     ORDER BY number_of_transactions DESC;
+ 
 -- =====================================================
 /* Compare every transaction with the previous
    transaction for the same account.
@@ -327,12 +331,29 @@ total_transaction AS
 
    Order by amount_difference from highest to lowest. */
 -- =====================================================
-
-
-
-
-
-
+ 
+ WITH transaction_comparison AS (
+      SELECT 
+        t.account_id, 
+        t.transaction_id,
+        t.transaction_date, 
+        LAG(t.amount) OVER (
+            PARTITION BY t.account_id 
+            ORDER BY t.transaction_date, t.transaction_id 
+        ) as previous_transaction_amount,
+        t.amount as current_transaction_amount
+        FROM BankTransaction as t 
+ )
+         SELECT 
+           account_id, 
+           transaction_id, 
+           transaction_date, 
+           previous_transaction_amount,
+           current_transaction_amount,
+           current_transaction_amount - previous_transaction_amount as amount_difference
+         FROM transaction_comparison
+         WHERE current_transaction_amount >= 2 * previous_transaction_amount
+         ORDER BY amount_difference DESC ;
 
 -- =====================================================
 /* Identify unusually large transactions using the
