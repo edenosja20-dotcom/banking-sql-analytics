@@ -118,11 +118,28 @@ GO
    from highest to lowest. */
 -- =====================================================
 
+   WITH high_transaction as (
 
-    
-
-
-
+       SELECT 
+         a.account_id, 
+         a.customer_id,
+         COUNT(*) as number_of_high_value_transactions,
+         SUM(t.amount) as total_high_value_volume
+         FROM account as a 
+         JOIN BankTransaction as t 
+            on a.account_id = t.account_id
+       WHERE t.amount > 20000 
+       GROUP BY a.account_id, a.customer_id 
+       
+   )   
+       SELECT 
+         account_id, 
+         customer_id, 
+         number_of_high_value_transactions,
+         total_high_value_volume
+       FROM high_transaction 
+       WHERE number_of_high_value_transactions >= 5
+       ORDER BY number_of_high_value_transactions DESC;
 
 -- =====================================================
 /* Find customers whose total transaction volume is
@@ -139,12 +156,33 @@ GO
    Order by total transaction volume from highest
    to lowest. */
 -- =====================================================
+   
+    WITH Transaction_volume as (  
+       SELECT 
+         c.customer_id, 
+         c.first_name, 
+         c.last_name, 
+         COUNT(*) as number_of_transactions,
+         SUM(t.amount) as total_transaction_volume,
+         AVG(t.amount) as average_transaction_amount
+        FROM customer as c   
+        JOIN account as a 
+           on c.customer_id = a.customer_id 
+        JOIN BankTransaction as t 
+           on t.account_id = a.account_id 
+        GROUP BY c.customer_id, c.first_name, c.last_name     
+    )
 
-
-
-
-
-
+      SELECT 
+       customer_id,
+       first_name, 
+       last_name, 
+       number_of_transactions,
+       total_transaction_volume,
+       average_transaction_amount
+     FROM Transaction_volume
+     WHERE total_transaction_volume > 1000000  
+     ORDER BY total_transaction_volume DESC ;
 
 -- =====================================================
 /* Identify accounts where at least one transaction
@@ -162,12 +200,19 @@ GO
    and account balance from highest to lowest. */
 -- =====================================================
 
-
-
-
-
-
-
+      SELECT 
+       a.account_id, 
+       a.customer_id, 
+       a.balance, 
+       t.transaction_id, 
+       t.amount as transaction_amount, 
+       t.transaction_date 
+       FROM account as a 
+       JOIN BankTransaction as t 
+          on a.account_id = t.account_id 
+       WHERE t.amount > a.balance   
+       ORDER BY (t.amount - a.balance) DESC ;
+              
 -- =====================================================
 /* Find customers whose total transaction volume is
    more than five times their total account balance.
@@ -183,11 +228,40 @@ GO
    Order by the ratio from highest to lowest. */
 -- =====================================================
 
-
-
-
-
-
+  WITH total_balance AS
+(
+    SELECT
+        c.customer_id,
+        c.first_name,
+        c.last_name,
+        SUM(a.balance) AS total_account_balance
+    FROM Customer AS c
+    JOIN Account AS a
+        ON c.customer_id = a.customer_id
+    GROUP BY c.customer_id, c.first_name, c.last_name
+),
+total_transaction AS
+(
+    SELECT
+        a.customer_id,
+        SUM(t.amount) AS total_transaction_volume
+    FROM Account AS a
+    JOIN BankTransaction AS t
+        ON a.account_id = t.account_id
+    GROUP BY a.customer_id
+)
+       SELECT
+         tb.customer_id,
+         tb.first_name,
+         tb.last_name,
+         tb.total_account_balance,
+         tt.total_transaction_volume,
+         tt.total_transaction_volume * 1.0 / NULLIF(tb.total_account_balance, 0) AS transaction_to_balance_ratio
+        FROM total_balance AS tb
+        JOIN total_transaction AS tt
+          ON tb.customer_id = tt.customer_id
+        WHERE tt.total_transaction_volume >  5 * tb.total_account_balance
+        ORDER BY transaction_to_balance_ratio DESC;
 
 -- =====================================================
 /* Calculate the total transaction volume for each
