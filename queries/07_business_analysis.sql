@@ -42,18 +42,16 @@ GO
    Order from highest balance to lowest. */
 -- =====================================================
 
-   SELECT TOP 10 
-    c.customer_id, 
-    c.first_name, 
-    c.last_name, 
-    SUM(t.amount) as total_account_balance
-    FROM customer as c  
-    JOIN account as a   
-      on c.customer_id = a.customer_id 
-    JOIN BankTransaction as t 
-      on t.account_id = a.account_id 
-    GROUP BY c.customer_id, c.first_name, c.last_name
-    ORDER BY total_account_balance DESC ;   
+    SELECT TOP 10
+       c.customer_id,
+       c.first_name,
+       c.last_name,
+      SUM(a.balance) AS total_account_balance
+     FROM Customer AS c
+     JOIN Account AS a
+         ON c.customer_id = a.customer_id
+      GROUP BY c.customer_id, c.first_name, c.last_name
+      ORDER BY total_account_balance DESC;
 
 -- =====================================================
 /* Create a branch performance report.
@@ -266,29 +264,18 @@ GO
    of accounts first. */
 -- =====================================================
 
-  WITH nr_of_accounts as (
-     SELECT 
-      c.customer_id, 
-      c.first_name, 
-      c.last_name, 
-      COUNT(*) as number_of_accounts, 
-      SUM(a.balance) as total_account_balance 
-      FROM customer as c 
-      JOIN account as a
-        on c.customer_id = a.customer_id 
-      JOIN BankTransaction as t
-        on t.account_id = a.account_id   
-      GROUP BY c.customer_id, c.first_name, c.last_name 
-  )
-     SELECT 
-       customer_id, 
-       first_name, 
-       last_name, 
-       number_of_accounts,
-       total_account_balance
-    FROM nr_of_accounts
-    WHERE number_of_accounts > 1 
-    ORDER BY number_of_accounts DESC ;
+    SELECT
+       c.customer_id,
+       c.first_name,
+       c.last_name,
+       COUNT(a.account_id) AS number_of_accounts,
+       SUM(a.balance) AS total_account_balance
+    FROM Customer AS c
+    JOIN Account AS a
+        ON c.customer_id = a.customer_id
+    GROUP BY c.customer_id,c.first_name, c.last_name
+    HAVING COUNT(a.account_id) > 1
+    ORDER BY number_of_accounts DESC;
 
 -- =====================================================
 /* Analyze the bank's loan portfolio by loan type.
@@ -428,7 +415,8 @@ WITH total_trans_volume as (
       SELECT 
         l.customer_id, 
         SUM(l.loan_amount) as total_active_loan_amount
-      FROM loan as l 
+      FROM loan as l
+      where l.status = 'Active' 
       GROUP BY l.customer_id 
   ) 
       SELECT 
@@ -441,7 +429,8 @@ WITH total_trans_volume as (
       JOIN total_trans_volume as tt 
          on c.customer_id = tt.customer_id 
       JOIN total_loan_amount as tl  
-         on tl.customer_id = c.customer_id 
+         on tl.customer_id = c.customer_id
+      WHERE tt.total_transaction_volume < 500000   
       ORDER BY  tt.total_transaction_volume DESC ;
 
 -- =====================================================
@@ -458,17 +447,36 @@ WITH total_trans_volume as (
    to lowest. */
 -- =====================================================
 
-     SELECT 
-        a.currency, 
-        COUNT(*) as number_of_accounts,
-        SUM(a.balance) as total_account_balance,
-        AVG(a.balance) as average_account_balance,
-        SUM(t.amount) as total_transaction_volume 
-      FROM account as a 
-      JOIN BankTransaction as t
-         on a.account_id = t.account_id 
-      GROUP BY a.currency
-      ORDER BY total_transaction_volume DESC ; 
+      WITH AccountMetrics AS
+     (
+        SELECT
+           currency,
+           COUNT(*) AS number_of_accounts,
+           SUM(balance) AS total_account_balance,
+           AVG(balance) AS average_account_balance
+         FROM Account
+         GROUP BY currency
+      ),
+      TransactionMetrics AS
+      (
+        SELECT
+          a.currency,
+          SUM(t.amount) AS total_transaction_volume
+        FROM Account AS a
+        JOIN BankTransaction AS t
+           ON a.account_id = t.account_id
+        GROUP BY a.currency
+      )
+     SELECT
+        am.currency,
+        am.number_of_accounts,
+        am.total_account_balance,
+        am.average_account_balance,
+        tm.total_transaction_volume
+     FROM AccountMetrics AS am
+     LEFT JOIN TransactionMetrics AS tm
+         ON am.currency = tm.currency
+     ORDER BY tm.total_transaction_volume DESC;
 
 -- =====================================================
 /* Compare active and inactive accounts.
@@ -484,16 +492,35 @@ WITH total_trans_volume as (
    account status. */
 -- =====================================================
 
-     SELECT 
-        a.status,
-        COUNT(*) as number_of_accounts, 
-        SUM(a.balance) as total_account_balance, 
-        AVG(a.balance) as average_account_balance, 
-        SUM(t.amount) as total_transaction_volume
-      FROM account as a 
-      JOIN BankTransaction as t
-         on a.account_id = t.account_id 
-       GROUP BY a.status ;
+     WITH AccountMetrics AS
+(
+    SELECT
+        status AS account_status,
+        COUNT(*) AS number_of_accounts,
+        SUM(balance) AS total_account_balance,
+        AVG(balance) AS average_account_balance
+    FROM Account
+    GROUP BY status
+),
+     TransactionMetrics AS
+   (
+      SELECT
+        a.status AS account_status,
+        SUM(t.amount) AS total_transaction_volume
+      FROM Account AS a
+      JOIN BankTransaction AS t
+        ON a.account_id = t.account_id
+      GROUP BY a.status
+   )
+SELECT
+    am.account_status,
+    am.number_of_accounts,
+    am.total_account_balance,
+    am.average_account_balance,
+    tm.total_transaction_volume
+FROM AccountMetrics AS am
+LEFT JOIN TransactionMetrics AS tm
+    ON am.account_status = tm.account_status;
 
 -- =====================================================
 /* Identify each customer's largest transaction.
@@ -511,13 +538,39 @@ WITH total_trans_volume as (
 
    Order from the largest transaction to the smallest. */
 -- =====================================================
+       
+         WITH ranked_accounts as (
+             SELECT 
+              c.customer_id, 
+              c.first_name, 
+              c.last_name, 
+              t.transaction_id, 
+              t.transaction_date, 
+              t.transaction_type, 
+              t.amount, 
+              ROW_NUMBER() OVER(
+                PARTITION BY c.customer_id 
+                ORDER BY t.amount DESC 
+              ) as rn 
+             FROM Customer as c  
+             JOIN account as a 
+                on c.customer_id = a.customer_id 
+             JOIN BankTransaction as t 
+                on t.account_id = a.account_id    
+         )
 
-         
-
-
-
-
-
+           SELECT 
+             customer_id, 
+             first_name, 
+             last_name, 
+             transaction_id, 
+             transaction_date, 
+             transaction_type, 
+             amount 
+           FROM ranked_accounts 
+           WHERE rn = 1 
+           ORDER BY amount DESC ;
+ 
 -- =====================================================
 /* Find the three largest transactions for every
    transaction type.
@@ -534,11 +587,29 @@ WITH total_trans_volume as (
    within each transaction type. */
 -- =====================================================
 
+WITH ranked_transaction as (
+       SELECT 
+         t.transaction_type, 
+         t.transaction_id, 
+         t.account_id, 
+         t.amount, 
+         t.transaction_date, 
+         ROW_NUMBER() OVER ( 
+              PARTITION BY t.transaction_type 
+              ORDER BY t.amount DESC 
+         ) as transaction_rank 
+         FROM BankTransaction as t 
+) 
 
-
-
-
-
+    SELECT
+      transaction_type, 
+      transaction_id, 
+      account_id, 
+      amount,
+      transaction_date, 
+      transaction_rank
+     FROM ranked_transaction 
+     WHERE transaction_rank <=3 ;
 
 -- =====================================================
 /* Find customers who have no loan but have a total
@@ -553,11 +624,28 @@ WITH total_trans_volume as (
    Order from highest balance to lowest. */
 -- =====================================================
 
-
-
-
-
-
+ WITH account_balance as (
+     SELECT 
+       c.customer_id, 
+       c.first_name, 
+       c.last_name, 
+       SUM(a.balance) as total_account_balance 
+       FROM customer as c 
+       JOIN account as a   
+         on c.customer_id = a.customer_id 
+      GROUP BY c.customer_id, c.first_name, c.last_name 
+) 
+     SELECT 
+       a.customer_id, 
+       a.first_name, 
+       a.last_name, 
+       a.total_account_balance 
+      FROM account_balance as a
+      LEFT JOIN loan as l 
+          on a.customer_id = l.customer_id 
+      WHERE a.total_account_balance > 40000
+      AND l.customer_id IS NULL
+      ORDER BY a.total_account_balance DESC ;    
 
 -- =====================================================
 /* Identify high-value customers who satisfy BOTH:
@@ -578,12 +666,45 @@ WITH total_trans_volume as (
    Order by total transaction volume from highest
    to lowest. */
 -- =====================================================
-
-
-
-
-
-
+       
+         WITH total_balance as (
+           SELECT
+             c.customer_id,
+             c.first_name, 
+             c.last_name, 
+             SUM(a.balance) as total_account_balance 
+            FROM customer as c
+            JOIN account as a 
+              on c.customer_id = a.customer_id 
+            GROUP BY c.customer_id, c.first_name, c.last_name 
+         ),
+          total_transaction as (
+              SELECT 
+               tb.customer_id, 
+               tb.first_name, 
+               tb.last_name, 
+               tb.total_account_balance,
+               SUM(t.amount) as total_transaction_volume
+              FROM total_balance as tb
+              JOIN account as a 
+                on tb.customer_id = a.customer_id 
+              JOIN BankTransaction as t 
+                 on t.account_id = a.account_id 
+               GROUP BY tb.customer_id, tb.first_name, tb.last_name, tb.total_account_balance   
+          )
+           
+           SELECT 
+             customer_id, 
+             first_name, 
+             last_name, 
+             total_account_balance, 
+             total_transaction_volume 
+            FROM total_transaction 
+            WHERE total_account_balance > (SELECT AVG(total_account_balance) 
+                                          FROM total_balance)
+            AND total_transaction_volume > (SELECT AVG(total_transaction_volume) 
+                                             FROM total_transaction)   
+            ORDER BY total_transaction_volume DESC ;                                                            
 
 -- =====================================================
 /* Measure customer concentration in transaction volume.
@@ -602,3 +723,40 @@ WITH total_trans_volume as (
 
    Order by customer_rank. */
 -- =====================================================
+
+WITH customer_totals as (
+
+      SELECT 
+         c.customer_id,
+         c.first_name, 
+         c.last_name, 
+         SUM(t.amount) as total_transaction_volume
+         FROM customer as c 
+         JOIN account as a   
+           on c.customer_id = a.customer_id 
+         JOIN BankTransaction as t 
+           on t.account_id = a.account_id 
+         GROUP BY c.customer_id, c.first_name, c.last_name
+),
+ Rankedcustomers as (
+        SELECT 
+          customer_id,
+          first_name, 
+          last_name, 
+          total_transaction_volume,
+          SUM(total_transaction_volume) OVER () as total_bank_volume,
+          ROW_NUMBER() OVER ( ORDER BY total_transaction_volume DESC) AS customer_rank
+        FROM customer_totals
+ )         
+         SELECT
+           customer_id,
+           first_name,
+           last_name,
+           total_transaction_volume,
+           total_transaction_volume * 100.0 / total_bank_volume AS percentage_of_bank_volume,
+           customer_rank
+         FROM RankedCustomers
+         WHERE customer_rank <= 10
+         ORDER BY customer_rank;
+
+         
