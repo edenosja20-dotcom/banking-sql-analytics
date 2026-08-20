@@ -375,12 +375,25 @@ total_transaction AS
 
    Order by amount from highest to lowest. */
 -- =====================================================
-
-
-
-
-
-
+      
+        WITH bank_stats AS
+       (
+          SELECT
+            AVG(amount) AS bank_average_transaction,
+            STDEVP(amount) AS bank_transaction_stddev
+          FROM BankTransaction
+       )
+           SELECT
+             t.transaction_id,
+             t.account_id,
+             t.amount,
+             s.bank_average_transaction,
+             s.bank_transaction_stddev,
+             t.transaction_date
+          FROM BankTransaction AS t
+          CROSS JOIN bank_stats AS s
+          WHERE t.amount > s.bank_average_transaction + 2 * s.bank_transaction_stddev
+          ORDER BY t.amount DESC;
 
 -- =====================================================
 /* Find each customer's largest transaction and
@@ -399,11 +412,30 @@ total_transaction AS
    highest to lowest. */
 -- =====================================================
 
+    WITH total_trans_customer as (
+          SELECT 
+             c.customer_id,
+             c.first_name, 
+             c.last_name,
+             MAX(t.amount) as largest_transaction,
+             SUM(t.amount) as total_transaction_volume
+          FROM BankTransaction as t
+          JOIN account as a   
+              on t.account_id = a.account_id 
+          JOIN customer as c 
+             on c.customer_id = a.customer_id     
+          GROUP BY c.customer_id, c.first_name, c.last_name
 
-
-
-
-
+    )
+      SELECT 
+        customer_id, 
+        first_name, 
+        last_name, 
+        largest_transaction, 
+        total_transaction_volume, 
+        ( largest_transaction * 100 / total_transaction_volume ) as largest_transaction_percentage
+        FROM total_trans_customer  
+        ORDER BY largest_transaction_percentage DESC ;
 
 -- =====================================================
 /* Identify customers whose total loan exposure is
@@ -420,12 +452,35 @@ total_transaction AS
    Order by loan_to_balance_ratio from highest
    to lowest. */
 -- =====================================================
-
-
-
-
-
-
+ 
+     WITH account_totals AS
+        (
+           SELECT
+             customer_id,
+             SUM(balance) AS total_account_balance
+           FROM Account
+           GROUP BY customer_id 
+        ),
+         loan_totals AS (
+           SELECT
+             customer_id,
+             SUM(loan_amount) AS total_loan_amount
+           FROM Loan
+           GROUP BY customer_id )
+        SELECT
+          c.customer_id,
+          c.first_name,
+          c.last_name,
+          a.total_account_balance,
+          l.total_loan_amount,
+          l.total_loan_amount * 1.0 / NULLIF(a.total_account_balance, 0) AS loan_to_balance_ratio
+        FROM Customer AS c
+        JOIN account_totals AS a
+           ON c.customer_id = a.customer_id
+        JOIN loan_totals AS l
+           ON c.customer_id = l.customer_id
+        WHERE l.total_loan_amount > a.total_account_balance
+        ORDER BY loan_to_balance_ratio DESC;
 
 -- =====================================================
 /* Find customers who have an active loan but whose
@@ -442,11 +497,34 @@ total_transaction AS
    to lowest. */
 -- =====================================================
 
-
-
-
-
-
+      WITH account_totals AS
+    (
+        SELECT
+          customer_id,
+          SUM(balance) AS total_account_balance
+        FROM Account
+        GROUP BY customer_id
+    ),
+       active_loans AS (
+    SELECT
+        customer_id,
+        SUM(loan_amount) AS total_active_loan_amount
+    FROM Loan
+    WHERE status = 'Active'
+    GROUP BY customer_id )
+        SELECT
+          c.customer_id,
+          c.first_name,
+          c.last_name,
+          a.total_account_balance,
+          l.total_active_loan_amount
+        FROM Customer AS c
+        JOIN account_totals AS a
+            ON c.customer_id = a.customer_id
+        JOIN active_loans AS l
+            ON c.customer_id = l.customer_id
+        WHERE a.total_account_balance < 20000
+        ORDER BY l.total_active_loan_amount DESC;
 
 -- =====================================================
 /* Identify customers who simultaneously have:
@@ -466,12 +544,53 @@ total_transaction AS
 
    Order by transaction volume from highest to lowest. */
 -- =====================================================
-
-
-
-
-
-
+ 
+WITH account_totals AS
+(
+    SELECT
+        customer_id,
+        SUM(balance) AS total_account_balance
+    FROM account
+    GROUP BY customer_id
+),
+transaction_totals AS
+(
+    SELECT
+        a.customer_id,
+        SUM(t.amount) AS total_transaction_volume
+    FROM account AS a
+    JOIN BankTransaction AS t
+        ON t.account_id = a.account_id
+    GROUP BY a.customer_id
+),
+loan_totals AS
+(
+    SELECT
+        customer_id,
+        SUM(loan_amount) AS total_active_loan_amount
+    FROM Loan
+    WHERE status = 'Active'
+    GROUP BY customer_id
+)
+     SELECT
+       c.customer_id,
+       c.first_name,
+       c.last_name,
+       COALESCE(a.total_account_balance, 0) AS total_account_balance,
+       COALESCE(t.total_transaction_volume, 0) AS total_transaction_volume,
+       COALESCE(l.total_active_loan_amount, 0) AS total_active_loan_amount
+     FROM customer AS c
+     LEFT JOIN account_totals AS a
+        ON a.customer_id = c.customer_id
+     LEFT JOIN transaction_totals AS t
+        ON t.customer_id = c.customer_id
+     LEFT JOIN loan_totals AS l
+       ON l.customer_id = c.customer_id
+     WHERE t.total_transaction_volume > 500000
+     AND a.total_account_balance <   ( SELECT AVG(total_account_balance)
+          FROM account_totals )
+     AND l.customer_id IS NOT NULL
+     ORDER BY total_transaction_volume DESC;
 
 -- =====================================================
 /* Find accounts whose most recent transaction happened
@@ -488,12 +607,19 @@ total_transaction AS
    the newest. */
 -- =====================================================
 
-
-
-
-
-
-
+    SELECT
+       a.account_id,
+       a.customer_id,
+       a.status AS account_status,
+       a.balance,
+       MAX(t.transaction_date) AS last_transaction_date
+    FROM Account AS a
+    JOIN BankTransaction AS t
+        ON t.account_id = a.account_id
+    GROUP BY a.account_id, a.customer_id, a.status, a.balance
+    HAVING MAX(t.transaction_date) <  DATEADD(DAY, -90, GETDATE())
+    ORDER BY last_transaction_date ASC;
+   
 -- =====================================================
 /* Identify customers who have multiple accounts and
    calculate the transaction volume generated by each
@@ -513,11 +639,40 @@ total_transaction AS
    Return only customers who own more than one account. */
 -- =====================================================
 
-
-
-
-
-
+  WITH transaction_per_account as (
+            SELECT  
+          t.account_id, 
+          SUM(t.amount) as account_transaction_volume
+          FROM BankTransaction as t
+         GROUP BY t.account_id
+  ), 
+   account_profile AS (
+        SELECT
+            a.customer_id,
+            a.account_id,
+            a.account_type,
+            a.balance AS account_balance,
+            t.account_transaction_volume,
+             COUNT(*) OVER (
+            PARTITION BY a.customer_id
+            ) AS number_of_accounts,
+             RANK() OVER (
+            PARTITION BY a.customer_id
+            ORDER BY t.account_transaction_volume DESC
+             ) AS account_rank
+        FROM Account AS a
+        JOIN transaction_per_account AS t
+             ON a.account_id = t.account_id )
+SELECT
+    customer_id,
+    account_id,
+    account_type,
+    account_balance,
+    account_transaction_volume,
+    account_rank
+FROM account_profile
+WHERE number_of_accounts > 1
+ORDER BY customer_id, account_rank;
 
 -- =====================================================
 /* Find customers whose transaction volume increased
@@ -541,12 +696,45 @@ total_transaction AS
    Order by percentage_increase from highest
    to lowest. */
 -- =====================================================
+   
+      WITH monthly_volume AS
+(
+    SELECT
+        a.customer_id,
+        YEAR(t.transaction_date) AS transaction_year,
+        MONTH(t.transaction_date) AS transaction_month,
+        SUM(t.amount) AS current_month_volume
+    FROM account AS a
+    JOIN BankTransaction AS t
+        ON t.account_id = a.account_id
+    GROUP BY  a.customer_id, YEAR(t.transaction_date), MONTH(t.transaction_date)
+),
+volume_with_previous AS
+(
+    SELECT
+        customer_id,
+        transaction_year,
+        transaction_month,
+        current_month_volume,
+        LAG(current_month_volume) OVER  (
+            PARTITION BY customer_id
+            ORDER BY transaction_year, transaction_month
+        ) AS previous_month_volume
+    FROM monthly_volume
+)
 
-
-
-
-
-
+SELECT
+    customer_id,
+    transaction_year,
+    transaction_month,
+    current_month_volume,
+    previous_month_volume,
+    ROUND( ((current_month_volume - previous_month_volume)  / previous_month_volume) * 100.0, 2) AS percentage_increase
+FROM volume_with_previous
+WHERE previous_month_volume IS NOT NULL
+  AND previous_month_volume <> 0
+  AND current_month_volume > previous_month_volume * 1.50
+ORDER BY percentage_increase DESC;
 
 -- =====================================================
 /* Identify the 10 accounts with the highest ratio
@@ -563,11 +751,23 @@ total_transaction AS
    Order by the ratio from highest to lowest. */
 -- =====================================================
 
-
-
-
-
-
+WITH Transaction_profile as (
+     SELECT 
+      account_id, 
+      AVG(amount) as average_transaction_amount, 
+      MAX(amount) as largest_transaction_amount,
+      COUNT(*) as number_of_transactions
+    FROM BankTransaction
+    GROUP BY account_id
+) 
+   SELECT TOP 10
+     account_id,
+     average_transaction_amount,
+     largest_transaction_amount,
+     largest_transaction_amount * 1.0 / NULLIF(average_transaction_amount, 0) AS max_to_average_ratio,
+     number_of_transactions
+   FROM Transaction_profile
+   ORDER BY max_to_average_ratio DESC ;  
 
 -- =====================================================
 /* Create a customer risk overview.
@@ -608,3 +808,83 @@ total_transaction AS
    lowest, then by transaction volume from highest
    to lowest. */
 -- =====================================================
+    
+
+     WITH Totals_profile as (
+          SELECT 
+            a.customer_id,
+            SUM(a.balance) as total_account_balance,
+            COUNT(*) as number_of_accounts
+           FROM account as a  
+           GROUP BY a.customer_id 
+     ),
+      transaction_total as (
+        SELECT  
+         a.customer_id, 
+         SUM(t.amount) as total_transaction_volume,
+         MAX(t.amount) as largest_transaction,
+         COUNT(*) as number_of_transactions
+        FROM account as a  
+        JOIN BankTransaction as t 
+            on a.account_id = t.account_id
+        GROUP BY customer_id 
+      ),
+       loan_total AS (
+          SELECT 
+            l.customer_id,
+            SUM(l.loan_amount) as total_loan_amount
+          FROM loan as l  
+          GROUP BY l.customer_id 
+       ),
+       risk_profile as (
+         SELECT 
+            c.customer_id,
+            c.first_name,
+            c.last_name,
+            COALESCE(a.total_account_balance, 0) AS total_account_balance,
+            COALESCE(t.total_transaction_volume, 0) AS total_transaction_volume,
+            COALESCE(t.largest_transaction, 0) AS largest_transaction,
+            COALESCE(l.total_loan_amount, 0) AS total_loan_amount,
+            COALESCE(a.number_of_accounts, 0) AS number_of_accounts,
+            COALESCE(t.number_of_transactions, 0) AS number_of_transactions,
+        CASE
+            WHEN COALESCE(t.largest_transaction, 0) > 25000
+            THEN 1
+            ELSE 0
+        END AS high_transaction_flag,
+        CASE
+            WHEN COALESCE(t.total_transaction_volume, 0) > 1000000
+            THEN 1
+            ELSE 0
+        END AS high_volume_flag,
+        CASE
+            WHEN COALESCE(l.total_loan_amount, 0) > COALESCE(a.total_account_balance, 0)
+            THEN 1
+            ELSE 0
+        END AS loan_exposure_flag
+        FROM customer as c 
+        LEFT JOIN Totals_profile AS a
+              ON a.customer_id = c.customer_id
+        LEFT JOIN transaction_total AS t
+              ON t.customer_id = c.customer_id
+        LEFT JOIN loan_total AS l
+              ON l.customer_id = c.customer_id
+   )
+ 
+      SELECT
+         customer_id,
+         first_name,
+         last_name,
+         total_account_balance,
+         total_transaction_volume,
+         largest_transaction,
+         total_loan_amount,
+         number_of_accounts,
+         number_of_transactions,
+  
+        high_transaction_flag,
+        high_volume_flag,
+        loan_exposure_flag,
+        high_transaction_flag + high_volume_flag + loan_exposure_flag AS risk_score
+      FROM risk_profile
+      ORDER BY  risk_score DESC, total_transaction_volume DESC;
