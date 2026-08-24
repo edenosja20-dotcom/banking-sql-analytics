@@ -32,7 +32,7 @@ GO
 */
 -- =====================================================
 
-CREATE OR ALTER PROCEDURE sp_GetCustomerFinancialProfile
+ALTER PROCEDURE sp_GetCustomerFinancialProfile
     @CustomerId INT
 AS
 BEGIN
