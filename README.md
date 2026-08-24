@@ -35,7 +35,9 @@ The project includes:
 
 ## Database Schema
 
-The database contains the following main tables:
+The following ER diagram shows the main relationships between customers, accounts, branches, transactions, loans, and cards.
+
+![Banking Database ER Diagram](docs/database_diagram.png)
 
 ### Customer
 
