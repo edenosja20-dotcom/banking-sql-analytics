@@ -37,7 +37,7 @@ The project includes:
 
 The following ER diagram shows the main relationships between customers, accounts, branches, transactions, loans, and cards.
 
-![Banking Database ER Diagram](07_docs/database_diagram.png)
+![Banking Database ER Diagram](07.docs/database_diagram.png)
 
 ### Customer
 
