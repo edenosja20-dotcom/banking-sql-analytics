@@ -430,7 +430,7 @@ WITH total_trans_volume as (
          on c.customer_id = tt.customer_id 
       JOIN total_loan_amount as tl  
          on tl.customer_id = c.customer_id
-      WHERE tt.total_transaction_volume < 500000   
+      WHERE tt.total_transaction_volume > 500000   
       ORDER BY  tt.total_transaction_volume DESC ;
 
 -- =====================================================
