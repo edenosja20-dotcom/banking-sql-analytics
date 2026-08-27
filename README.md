@@ -39,86 +39,69 @@ The following ER diagram shows the main relationships between customers, account
 
 ![Banking Database ER Diagram](07.docs/database_diagram.png)
 
-### Customer
+Why I Selected This Schema
 
-Stores customer information.
+I selected a retail banking schema because it provides realistic one-to-many relationships and analytical problems while remaining understandable as a portfolio project.
 
-Main columns:
+The schema is centered around six entities:
 
-- customer_id
-- first_name
-- last_name
-- date_of_birth
-- email
-- phone
-- city
-- created_at
+Customer represents the bank’s clients.
+Account connects customers to branches and stores their current balances.
+Branch allows branch-level performance analysis.
+BankTransaction records activity associated with accounts.
+Loan represents customer borrowing and financial exposure.
+Card represents payment cards connected to accounts.
 
-### Branch
+This structure allowed me to practise relational database design, primary and foreign keys, multi-table joins, aggregations, CTEs, window functions, stored procedures and indexing within one consistent business domain.
 
-Stores bank branch information.
+I kept the model intentionally smaller than a real core-banking database so that the project could focus on SQL analysis. The current schema is a learning model rather than a complete production banking system.
 
-Main columns:
+Challenges and Mistakes Encountered
 
-- branch_id
-- branch_name
-- city
+One of the main challenges was preventing incorrect aggregation when joining tables with one-to-many relationships. For example, joining customers, accounts, transactions and loans in a single query can multiply rows and cause account balances or loan amounts to be counted repeatedly. I addressed this in the financial and risk profiles by aggregating accounts, transactions and loans separately in CTEs before joining the resulting customer-level totals.
 
-### Account
+I also learned the importance of choosing between INNER JOIN and LEFT JOIN. An inner join can unintentionally remove customers who have no loan or no transactions. For customer-profile reports, I used left joins and COALESCE so that these customers could still appear with zero values.
 
-Stores customer bank accounts.
+Another challenge was filtering DATETIME2 values correctly. Using an inclusive end date can exclude transactions occurring later during the final day. The customer-transactions procedure therefore uses a half-open date range:
 
-Main columns:
+transaction_date >= @StartDate
+AND transaction_date < DATEADD(DAY, 1, @EndDate)
 
-- account_id
-- customer_id
-- branch_id
-- account_type
-- balance
-- currency
-- opened_date
-- status
+While studying query optimization, I also compared a non-SARGable date condition:
 
-### BankTransaction
+WHERE YEAR(transaction_date) = 2026
 
-Stores transactions made through customer accounts.
+with a SARGable range condition:
 
-Main columns:
+WHERE transaction_date >= '2026-01-01'
+  AND transaction_date < '2027-01-01'
 
-- transaction_id
-- account_id
-- transaction_type
-- amount
-- transaction_date
-- description
+The range condition gives SQL Server the opportunity to use an index on transaction_date.
 
-### Loan
+The project also showed me that database correctness is not only about producing the expected result. Stored procedures must validate inputs, handle errors, preserve data integrity and behave safely when multiple users execute them concurrently.
 
-Stores customer loans.
+What I Would Change for a Production Bank
 
-Main columns:
+A production banking database would require a significantly more detailed and controlled design.
 
-- loan_id
-- customer_id
-- loan_type
-- loan_amount
-- interest_rate
-- start_date
-- end_date
-- status
+The most important changes would include:
 
-### Card
-
-Stores cards connected to bank accounts.
-
-Main columns:
-
-- card_id
-- account_id
-- card_type
-- issued_date
-- expiry_date
-- status
+Replace direct balance changes with an immutable double-entry ledger containing corresponding debit and credit entries.
+Add transaction statuses, posting dates, value dates, references, channels, counterparties, reversals and idempotency keys.
+Store transaction direction so deposits, withdrawals and transfers can be analyzed separately.
+Add currency to loans and transactions and introduce exchange-rate tables for base-currency reporting.
+Prevent direct summation of balances in different currencies without conversion.
+Introduce loan installments, repayment schedules, overdue amounts, collateral and default classifications.
+Move account types, transaction types, statuses and currencies into controlled reference tables.
+Add customer KYC, risk-rating and consent information with appropriate privacy controls.
+Encrypt or mask personally identifiable information such as email addresses and phone numbers.
+Implement role-based access control, auditing and separation of duties.
+Improve the transfer procedure with locking, concurrency control, structured errors and ledger entries.
+Add reconciliation rules to confirm that ledger activity matches account balances.
+Use partitioning and archival strategies for very large transaction tables.
+Select indexes from measured production workloads and monitor their write and storage costs.
+Add automated database deployment, integration tests, rollback scripts and continuous-integration validation.
+Define backup, disaster-recovery, retention and regulatory-compliance procedures.
 
 
 ## Database Relationships
@@ -133,3 +116,7 @@ Customer
    |         |----< Card
    |
    |----< Loan
+
+
+
+   
